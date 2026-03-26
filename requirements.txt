@@ -2,5 +2,5 @@ streamlit
 requests
 python-dateutil
 pandas
-matplotlib
 beautifulsoup4
+plotly
