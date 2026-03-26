@@ -4,6 +4,10 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from dateutil import parser
 import pandas as pd
+import matplotlib.pyplot as plt
+
+# 한글 폰트 설정
+plt.rcParams['font.family'] = 'Malgun Gothic'
 
 st.set_page_config(page_title="뉴스 BI 대시보드", layout="wide")
 
@@ -75,42 +79,65 @@ col3.metric("데이터 상태", "정상")
 st.markdown("---")
 
 # ------------------------
-# 📊 BI 차트 영역
+# 📊 데이터 가공
 # ------------------------
-
-# 시간별 뉴스 개수
 times = []
 for n in news_list:
     try:
         dt = parser.parse(n["date"])
-        hour = dt.hour
-        times.append(hour)
+        times.append(dt.hour)
     except:
         pass
 
 df = pd.DataFrame(times, columns=["hour"])
+chart_data = df["hour"].value_counts().sort_index()
 
-if not df.empty:
-    chart_data = df["hour"].value_counts().sort_index()
-
-    st.subheader("📊 시간대별 뉴스 발생 분포")
-    st.bar_chart(chart_data)
-
-# 키워드 포함 여부 간단 통계
 keyword_count = sum(1 for n in news_list if KEYWORD in n["title"])
 
-pie_df = pd.DataFrame({
-    "구분": ["키워드 포함", "기타"],
-    "개수": [keyword_count, len(news_list) - keyword_count]
-}).set_index("구분")
+# ------------------------
+# 📊 그래프 영역
+# ------------------------
+colA, colB = st.columns(2)
 
-st.subheader("📊 키워드 포함 비율")
-st.bar_chart(pie_df)
+# 시간대별 그래프
+with colA:
+    st.subheader("📊 시간대별 뉴스 발생 현황")
+
+    if not df.empty:
+        fig, ax = plt.subplots()
+        chart_data.plot(kind='bar', ax=ax)
+
+        ax.set_xlabel("시간 (시)")
+        ax.set_ylabel("뉴스 건수")
+        ax.set_title("시간대별 뉴스 분포")
+
+        plt.xticks(rotation=0)
+
+        st.pyplot(fig)
+
+# 키워드 비율 그래프
+with colB:
+    st.subheader("📊 키워드 포함 비율")
+
+    fig2, ax2 = plt.subplots()
+
+    labels = ["키워드 포함", "기타"]
+    values = [keyword_count, len(news_list) - keyword_count]
+
+    ax2.bar(labels, values)
+
+    ax2.set_xlabel("구분")
+    ax2.set_ylabel("건수")
+    ax2.set_title("키워드 포함 여부")
+
+    plt.xticks(rotation=0)
+
+    st.pyplot(fig2)
 
 st.markdown("---")
 
 # ------------------------
-# 📰 뉴스 카드 UI
+# 📰 뉴스 카드
 # ------------------------
 st.subheader("📰 뉴스 리스트")
 
