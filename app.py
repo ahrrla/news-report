@@ -3,11 +3,12 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 스타일 (연구소 느낌)
+# 스타일
 # =========================
 st.markdown("""
 <style>
@@ -15,21 +16,21 @@ body {
     background-color:#f5f7fb;
 }
 
-/* 상단 */
+/* 헤더 */
 .header {
     background: linear-gradient(90deg, #1e3a8a, #2563eb);
-    padding:20px;
+    padding:25px;
     border-radius:12px;
     color:white;
-    margin-bottom:20px;
 }
 
-/* 카드 */
-.card {
+/* KPI 카드 */
+.kpi {
     background:white;
-    padding:15px;
-    border-radius:10px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    text-align:center;
 }
 
 /* 리스트 */
@@ -49,7 +50,6 @@ body {
 .news-title {
     font-size:16px;
     font-weight:700;
-    margin-bottom:5px;
 }
 
 .news-desc {
@@ -57,35 +57,39 @@ body {
     color:#666;
 }
 
-.news-img {
-    flex:1;
-    text-align:right;
-}
-
 .news-img img {
     width:140px;
     height:90px;
-    object-fit:cover;
     border-radius:8px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# 헤더 (핵심 복구)
+# 키워드 입력
+# =========================
+keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
+
+# =========================
+# 실시간 시간 (핵심)
+# =========================
+placeholder_time = st.empty()
+
+# =========================
+# 헤더
 # =========================
 st.markdown(f"""
 <div class="header">
     <h2>🧬 재생의학연구소 뉴스 인사이트</h2>
-    <p>Last Update: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+    <p>현재 키워드: <b>{keyword}</b></p>
 </div>
 """, unsafe_allow_html=True)
 
 # =========================
 # 뉴스 가져오기
 # =========================
-def get_news():
-    url = "https://news.google.com/rss/search?q=병원+피부미용+재생의학&hl=ko&gl=KR&ceid=KR:ko"
+def get_news(keyword):
+    url = f"https://news.google.com/rss/search?q={keyword}&hl=ko&gl=KR&ceid=KR:ko"
     res = requests.get(url)
     soup = BeautifulSoup(res.text, "xml")
 
@@ -102,7 +106,7 @@ def get_news():
     return pd.DataFrame(data)
 
 # =========================
-# 이미지 가져오기
+# 이미지
 # =========================
 def get_img(url):
     try:
@@ -112,31 +116,30 @@ def get_img(url):
         og = soup.find("meta", property="og:image")
         if og:
             return og["content"]
-
     except:
         pass
 
     return "https://via.placeholder.com/150"
 
-df = get_news()
+df = get_news(keyword)
 
 # =========================
-# 대시보드 (복구)
+# KPI
 # =========================
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown(f"""
-    <div class="card">
+    <div class="kpi">
         <h4>총 뉴스 수</h4>
-        <h2>{len(df)}</h2>
+        <h1>{len(df)}</h1>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown(f"""
-    <div class="card">
-        <h4>최신 시간</h4>
+    <div class="kpi">
+        <h4>최신 기사 시간</h4>
         <h2>{df.iloc[0]['date'][:16]}</h2>
     </div>
     """, unsafe_allow_html=True)
@@ -144,7 +147,7 @@ with col2:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# 리스트 (핵심)
+# 리스트
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -164,3 +167,11 @@ for _, row in df.iterrows():
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+# =========================
+# 실시간 시계 (초단위)
+# =========================
+while True:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    placeholder_time.markdown(f"⏰ 현재 시간: {now}")
+    time.sleep(1)
