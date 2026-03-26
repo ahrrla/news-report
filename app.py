@@ -3,15 +3,16 @@ import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from dateutil import parser
+import pandas as pd
 
-st.set_page_config(page_title="뉴스 리포트", layout="wide")
+st.set_page_config(page_title="뉴스 BI 대시보드", layout="wide")
 
-st.title("🧠 바이오/의료 뉴스 자동 리포트")
+st.title("🧠 바이오/의료 뉴스 BI 대시보드")
 
 KEYWORD = st.text_input("키워드", "재생의학")
 
 # ------------------------
-# 시간 변환 (몇분 전)
+# 시간 변환
 # ------------------------
 def time_ago(pub_date):
     try:
@@ -32,7 +33,7 @@ def time_ago(pub_date):
         return pub_date
 
 # ------------------------
-# 뉴스 가져오기 (이미지 포함)
+# 뉴스 수집
 # ------------------------
 def get_news(keyword):
     url = f"https://news.google.com/rss/search?q={keyword}&hl=ko&gl=KR&ceid=KR:ko"
@@ -40,13 +41,12 @@ def get_news(keyword):
     root = ET.fromstring(res.content)
 
     items = []
-    for item in root.findall(".//item")[:10]:
+    for item in root.findall(".//item")[:15]:
         title = item.find("title").text
         link = item.find("link").text
         pub_date = item.find("pubDate").text
 
-        # 임시 이미지 (실제 뉴스 크롤링 없이 대체)
-        img = "https://source.unsplash.com/400x250/?medical"
+        img = "https://picsum.photos/400/250"
 
         items.append({
             "title": title,
@@ -56,9 +56,6 @@ def get_news(keyword):
         })
     return items
 
-# ------------------------
-# 버튼
-# ------------------------
 if st.button("🔄 새로고침"):
     st.rerun()
 
@@ -67,7 +64,7 @@ news_list = get_news(KEYWORD)
 st.caption(f"마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # ------------------------
-# KPI 영역 (BI 느낌)
+# KPI 영역
 # ------------------------
 col1, col2, col3 = st.columns(3)
 
@@ -78,14 +75,51 @@ col3.metric("데이터 상태", "정상")
 st.markdown("---")
 
 # ------------------------
-# 카드 UI
+# 📊 BI 차트 영역
 # ------------------------
+
+# 시간별 뉴스 개수
+times = []
+for n in news_list:
+    try:
+        dt = parser.parse(n["date"])
+        hour = dt.hour
+        times.append(hour)
+    except:
+        pass
+
+df = pd.DataFrame(times, columns=["hour"])
+
+if not df.empty:
+    chart_data = df["hour"].value_counts().sort_index()
+
+    st.subheader("📊 시간대별 뉴스 발생 분포")
+    st.bar_chart(chart_data)
+
+# 키워드 포함 여부 간단 통계
+keyword_count = sum(1 for n in news_list if KEYWORD in n["title"])
+
+pie_df = pd.DataFrame({
+    "구분": ["키워드 포함", "기타"],
+    "개수": [keyword_count, len(news_list) - keyword_count]
+}).set_index("구분")
+
+st.subheader("📊 키워드 포함 비율")
+st.bar_chart(pie_df)
+
+st.markdown("---")
+
+# ------------------------
+# 📰 뉴스 카드 UI
+# ------------------------
+st.subheader("📰 뉴스 리스트")
+
 for news in news_list:
     with st.container():
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 3])
 
         with col1:
-            st.image(news["image"])
+            st.image(news["image"], use_container_width=True)
 
         with col2:
             st.subheader(news["title"])
