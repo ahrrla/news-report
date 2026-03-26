@@ -1,7 +1,6 @@
 streamlit
 requests
-python-dateutil
 pandas
 beautifulsoup4
 plotly
-newsapi-python
+lxml
