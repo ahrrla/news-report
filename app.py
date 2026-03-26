@@ -3,89 +3,65 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
-from streamlit_autorefresh import st_autorefresh
-from html import unescape
+import time
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 자동 새로고침 (1초)
-# =========================
-st_autorefresh(interval=1000, key="clock")
-
-# =========================
-# 스타일 (모바일 포함)
+# 스타일
 # =========================
 st.markdown("""
 <style>
-
 body {
-    color:#111827;
+    background-color:#f5f7fb;
 }
 
-.live-time {
-    font-size:30px;
-    font-weight:900;
-    color:#1e3a8a;
-    margin-bottom:10px;
-}
-
-.news-card {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    background:#ffffff;
-    padding:14px;
+/* 헤더 */
+.header {
+    background: linear-gradient(90deg, #1e3a8a, #2563eb);
+    padding:25px;
     border-radius:12px;
-    margin-bottom:12px;
-    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    color:white;
 }
 
-.news-left {
-    width:70%;
+/* KPI 카드 */
+.kpi {
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+    text-align:center;
+}
+
+/* 리스트 */
+.news-row {
+    display:flex;
+    background:white;
+    border-radius:10px;
+    padding:15px;
+    margin-bottom:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+}
+
+.news-text {
+    flex:3;
 }
 
 .news-title {
-    font-size:15px;
+    font-size:16px;
     font-weight:700;
-    color:#111827;
 }
 
-.news-date {
-    font-size:12px;
-    color:#6b7280;
-    margin-top:4px;
-}
-
-.news-link {
-    display:inline-block;
-    margin-top:6px;
-    color:#2563eb;
-    font-weight:600;
+.news-desc {
     font-size:13px;
+    color:#666;
 }
 
-.news-img {
-    width:100px;
-    height:70px;
+.news-img img {
+    width:140px;
+    height:90px;
     border-radius:8px;
 }
-
-@media (max-width:768px) {
-    .news-card {
-        flex-direction:column;
-        align-items:flex-start;
-    }
-    .news-left {
-        width:100%;
-    }
-    .news-img {
-        margin-top:8px;
-        width:100%;
-        height:auto;
-    }
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -95,17 +71,18 @@ body {
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 실시간 시간
+# 실시간 시간 (핵심)
 # =========================
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.markdown(f'<div class="live-time">⏰ 현재 시간: {now}</div>', unsafe_allow_html=True)
+placeholder_time = st.empty()
 
 # =========================
 # 헤더
 # =========================
 st.markdown(f"""
-<h2>🧬 재생의학연구소 뉴스 인사이트</h2>
-<p>현재 키워드: <b>{keyword}</b></p>
+<div class="header">
+    <h2>🧬 재생의학연구소 뉴스 인사이트</h2>
+    <p>현재 키워드: <b>{keyword}</b></p>
+</div>
 """, unsafe_allow_html=True)
 
 # =========================
@@ -129,7 +106,7 @@ def get_news(keyword):
     return pd.DataFrame(data)
 
 # =========================
-# 이미지 가져오기
+# 이미지
 # =========================
 def get_img(url):
     try:
@@ -142,7 +119,7 @@ def get_img(url):
     except:
         pass
 
-    return "https://via.placeholder.com/120"
+    return "https://via.placeholder.com/150"
 
 df = get_news(keyword)
 
@@ -152,36 +129,49 @@ df = get_news(keyword)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.metric("총 뉴스 수", len(df))
+    st.markdown(f"""
+    <div class="kpi">
+        <h4>총 뉴스 수</h4>
+        <h1>{len(df)}</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
-    if len(df) > 0:
-        st.metric("최신 기사 시간", df.iloc[0]["date"][:16])
+    st.markdown(f"""
+    <div class="kpi">
+        <h4>최신 기사 시간</h4>
+        <h2>{df.iloc[0]['date'][:16]}</h2>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# 뉴스 리스트 (정상 출력)
+# 리스트
 # =========================
 st.subheader("📄 뉴스 리스트")
 
 for _, row in df.iterrows():
 
-    # 🔥 핵심 수정 (HTML 깨짐 해결)
-    title = unescape(row["title"]).replace("<b>", "").replace("</b>", "")
-
     img = get_img(row["link"])
 
     st.markdown(f"""
-<div class="news-card">
-
-    <div class="news-left">
-        <div class="news-title">{title}</div>
-        <div class="news-date">{row['date']}</div>
-        <a class="news-link" href="{row['link']}" target="_blank">기사보기 →</a>
+    <div class="news-row">
+        <div class="news-text">
+            <div class="news-title">{row['title']}</div>
+            <div class="news-desc">{row['date']}</div>
+            <a href="{row['link']}" target="_blank">기사보기 →</a>
+        </div>
+        <div class="news-img">
+            <img src="{img}">
+        </div>
     </div>
+    """, unsafe_allow_html=True)
 
-    <div>
-        <img class="news-img" src="{img}">
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
+# =========================
+# 실시간 시계 (초단위)
+# =========================
+while True:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    placeholder_time.markdown(f"⏰ 현재 시간: {now}")
+    time.sleep(1)
