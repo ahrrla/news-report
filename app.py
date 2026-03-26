@@ -3,15 +3,27 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
-import time
+from streamlit_autorefresh import st_autorefresh
+from html import unescape
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 스타일
+# 자동 새로고침 (🔥 while 대신)
+# =========================
+st_autorefresh(interval=1000, key="clock")
+
+# =========================
+# 스타일 (🔥 색상만 추가)
 # =========================
 st.markdown("""
 <style>
+
+/* 🔥 전체 글자 색 강제 */
+html, body, [class*="css"] {
+    color:#111111 !important;
+}
+
 body {
     background-color:#f5f7fb;
 }
@@ -50,11 +62,12 @@ body {
 .news-title {
     font-size:16px;
     font-weight:700;
+    color:#111111;
 }
 
 .news-desc {
     font-size:13px;
-    color:#666;
+    color:#555555;
 }
 
 .news-img img {
@@ -62,6 +75,15 @@ body {
     height:90px;
     border-radius:8px;
 }
+
+/* 시계 */
+.clock {
+    font-size:24px;
+    font-weight:800;
+    color:#1e3a8a;
+    margin-bottom:10px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,9 +93,10 @@ body {
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 실시간 시간 (핵심)
+# 실시간 시간 (🔥 정상 방식)
 # =========================
-placeholder_time = st.empty()
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.markdown(f'<div class="clock">⏰ 현재 시간: {now}</div>', unsafe_allow_html=True)
 
 # =========================
 # 헤더
@@ -137,28 +160,30 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown(f"""
-    <div class="kpi">
-        <h4>최신 기사 시간</h4>
-        <h2>{df.iloc[0]['date'][:16]}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    if len(df) > 0:
+        st.markdown(f"""
+        <div class="kpi">
+            <h4>최신 기사 시간</h4>
+            <h2>{df.iloc[0]['date'][:16]}</h2>
+        </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
-# 리스트
+# 리스트 (🔥 HTML 깨짐 방지)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
 for _, row in df.iterrows():
 
+    title = unescape(row["title"]).replace("<b>", "").replace("</b>", "")
     img = get_img(row["link"])
 
     st.markdown(f"""
     <div class="news-row">
         <div class="news-text">
-            <div class="news-title">{row['title']}</div>
+            <div class="news-title">{title}</div>
             <div class="news-desc">{row['date']}</div>
             <a href="{row['link']}" target="_blank">기사보기 →</a>
         </div>
@@ -167,11 +192,3 @@ for _, row in df.iterrows():
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-# =========================
-# 실시간 시계 (초단위)
-# =========================
-while True:
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    placeholder_time.markdown(f"⏰ 현재 시간: {now}")
-    time.sleep(1)
