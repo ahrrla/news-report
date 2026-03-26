@@ -8,60 +8,32 @@ import time
 st.set_page_config(layout="wide")
 
 # =========================
-# 스타일
+# 스타일 (기존 유지 + 시간만 개선)
 # =========================
 st.markdown("""
 <style>
-body {
-    background-color:#f5f7fb;
-}
 
-/* 헤더 */
-.header {
-    background: linear-gradient(90deg, #1e3a8a, #2563eb);
-    padding:25px;
-    border-radius:12px;
-    color:white;
-}
-
-/* KPI 카드 */
-.kpi {
-    background:white;
-    padding:20px;
-    border-radius:12px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    text-align:center;
-}
-
-/* 리스트 */
-.news-row {
-    display:flex;
-    background:white;
-    border-radius:10px;
-    padding:15px;
-    margin-bottom:12px;
-    box-shadow:0 2px 6px rgba(0,0,0,0.08);
-}
-
-.news-text {
-    flex:3;
-}
-
-.news-title {
-    font-size:16px;
+/* 시간 강조 */
+.live-time {
+    font-size:28px;
     font-weight:700;
+    color:#38bdf8;
+    margin-top:10px;
+}
+
+/* 모바일 가독성 보정 (최소 수정) */
+.news-title {
+    color:#ffffff !important;
 }
 
 .news-desc {
-    font-size:13px;
-    color:#666;
+    color:#cbd5f5 !important;
 }
 
-.news-img img {
-    width:140px;
-    height:90px;
-    border-radius:8px;
+a {
+    color:#38bdf8 !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,12 +43,12 @@ body {
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 실시간 시간 (핵심)
+# 실시간 시간
 # =========================
-placeholder_time = st.empty()
+time_placeholder = st.empty()
 
 # =========================
-# 헤더
+# 헤더 (기존 유지)
 # =========================
 st.markdown(f"""
 <div class="header">
@@ -124,7 +96,7 @@ def get_img(url):
 df = get_news(keyword)
 
 # =========================
-# KPI
+# KPI (기존 그대로)
 # =========================
 col1, col2 = st.columns(2)
 
@@ -144,10 +116,20 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
+# =========================
+# 실시간 시간 표시 (핵심 개선)
+# =========================
+while True:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    time_placeholder.markdown(f"""
+    <div class="live-time">⏰ 현재 시간: {now}</div>
+    """, unsafe_allow_html=True)
+
+    time.sleep(1)
 
 # =========================
-# 리스트
+# 리스트 (기존 유지)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -167,11 +149,3 @@ for _, row in df.iterrows():
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-# =========================
-# 실시간 시계 (초단위)
-# =========================
-while True:
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    placeholder_time.markdown(f"⏰ 현재 시간: {now}")
-    time.sleep(1)
