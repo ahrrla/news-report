@@ -2,11 +2,10 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
 from bs4 import BeautifulSoup
 
 # =========================
-# 네이버 API
+# 네이버 API (정확히 입력)
 # =========================
 CLIENT_ID = "dmIEAMApT_Ep6C7bPNs2"
 CLIENT_SECRET = "Cylzhl0oGi"
@@ -19,6 +18,7 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 body {background:#0f172a;color:white;}
+.header {font-size:28px;font-weight:700;margin-bottom:10px;}
 .kpi {background:#1e293b;padding:20px;border-radius:14px;text-align:center;}
 .card {background:#1e293b;padding:12px;border-radius:14px;margin-bottom:15px;}
 .card img {width:100%;height:180px;object-fit:cover;border-radius:10px;}
@@ -27,8 +27,10 @@ body {background:#0f172a;color:white;}
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("<div class='header'>📊 AI 뉴스 BI 대시보드</div>", unsafe_allow_html=True)
+
 # =========================
-# 뉴스 검색 함수
+# 뉴스 가져오기 (안정형)
 # =========================
 def get_news():
     url = "https://openapi.naver.com/v1/search/news.json"
@@ -44,26 +46,25 @@ def get_news():
         "sort": "date"
     }
 
-    res = requests.get(url, headers=headers, params=params)
+    try:
+        res = requests.get(url, headers=headers, params=params)
 
-    # 🔥 상태코드 체크
-    if res.status_code != 200:
-        st.error(f"API 오류 코드: {res.status_code}")
-        st.text(res.text)
+        if res.status_code != 200:
+            st.error(f"API 오류 코드: {res.status_code}")
+            st.text(res.text)
+            return []
+
+        data = res.json()
+
+        return data.get("items", [])
+
+    except Exception as e:
+        st.error("API 호출 실패")
+        st.text(e)
         return []
-
-    data = res.json()
-
-    # 🔥 items 없으면 대비
-    if "items" not in data:
-        st.error("API 응답 이상 (items 없음)")
-        st.text(data)
-        return []
-
-    return data["items"]
 
 # =========================
-# 이미지 추출 (기사 크롤링)
+# 이미지 가져오기
 # =========================
 def get_image(url):
     try:
@@ -84,15 +85,23 @@ def get_image(url):
     return "https://via.placeholder.com/300"
 
 # =========================
-# 데이터
+# 실행
 # =========================
 data = get_news()
 
+if not data:
+    st.warning("뉴스 없음 (API 인증 또는 설정 문제)")
+    st.stop()
+
 df = pd.DataFrame(data)
 
-df["title"] = df["title"].str.replace("<b>", "").str.replace("</b>", "")
-df["description"] = df["description"].str.replace("<b>", "").str.replace("</b>", "")
-df["pubDate"] = pd.to_datetime(df["pubDate"])
+# 컬럼 안전 처리
+df["title"] = df.get("title", "").astype(str).str.replace("<b>", "").str.replace("</b>", "")
+df["description"] = df.get("description", "").astype(str).str.replace("<b>", "").str.replace("</b>", "")
+df["link"] = df.get("link", "")
+df["originallink"] = df.get("originallink", "")
+df["pubDate"] = pd.to_datetime(df.get("pubDate"))
+
 df["hour"] = df["pubDate"].dt.hour
 
 # =========================
@@ -111,7 +120,7 @@ fig.update_layout(height=300, template="plotly_dark")
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# 뉴스 리스트 (개선됨)
+# 뉴스 리스트
 # =========================
 st.markdown("## 📰 뉴스 리스트")
 
