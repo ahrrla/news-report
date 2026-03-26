@@ -13,13 +13,17 @@ st.set_page_config(layout="wide")
 st_autorefresh(interval=1000, key="clock")
 
 # =========================
-# 스타일
+# 스타일 (모바일 포함 개선)
 # =========================
 st.markdown("""
 <style>
 
+body {
+    color:#111827;
+}
+
 .live-time {
-    font-size:32px;
+    font-size:28px;
     font-weight:800;
     color:#1e3a8a;
     margin-bottom:10px;
@@ -28,25 +32,26 @@ st.markdown("""
 .news-card {
     display:flex;
     justify-content:space-between;
+    align-items:center;
     background:#ffffff;
-    padding:16px;
+    padding:14px;
     border-radius:12px;
     margin-bottom:12px;
     box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 .news-left {
-    width:75%;
+    width:70%;
 }
 
 .news-title {
-    font-size:16px;
+    font-size:15px;
     font-weight:700;
     color:#111827;
 }
 
 .news-date {
-    font-size:13px;
+    font-size:12px;
     color:#6b7280;
     margin-top:4px;
 }
@@ -56,12 +61,28 @@ st.markdown("""
     margin-top:6px;
     color:#2563eb;
     font-weight:600;
+    font-size:13px;
 }
 
 .news-img {
-    width:120px;
-    height:80px;
+    width:100px;
+    height:70px;
     border-radius:8px;
+}
+
+@media (max-width:768px) {
+    .news-card {
+        flex-direction:column;
+        align-items:flex-start;
+    }
+    .news-left {
+        width:100%;
+    }
+    .news-img {
+        margin-top:8px;
+        width:100%;
+        height:auto;
+    }
 }
 
 </style>
@@ -137,28 +158,27 @@ with col2:
     st.metric("최신 기사 시간", df.iloc[0]["date"][:16])
 
 # =========================
-# 뉴스 리스트
+# 뉴스 리스트 (🔥 핵심 정상 출력)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
 for _, row in df.iterrows():
 
+    title = row["title"].replace("<", "").replace(">", "")
     img = get_img(row["link"])
 
-    html = f"""
-    <div class="news-card">
+    st.markdown(f"""
+<div class="news-card">
 
-        <div class="news-left">
-            <div class="news-title">{row['title']}</div>
-            <div class="news-date">{row['date']}</div>
-            <a class="news-link" href="{row['link']}" target="_blank">기사보기 →</a>
-        </div>
-
-        <div>
-            <img class="news-img" src="{img}">
-        </div>
-
+    <div class="news-left">
+        <div class="news-title">{title}</div>
+        <div class="news-date">{row['date']}</div>
+        <a class="news-link" href="{row['link']}" target="_blank">기사보기 →</a>
     </div>
-    """
 
-    st.markdown(html, unsafe_allow_html=True)
+    <div>
+        <img class="news-img" src="{img}">
+    </div>
+
+</div>
+""", unsafe_allow_html=True)
