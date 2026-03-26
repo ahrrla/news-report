@@ -3,8 +3,19 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
 
 st.set_page_config(layout="wide")
+
+# =========================
+# 자동 새로고침 (1초마다)
+# =========================
+if "run" not in st.session_state:
+    st.session_state.run = True
+
+if st.session_state.run:
+    time.sleep(1)
+    st.rerun()
 
 # =========================
 # 스타일
@@ -13,45 +24,43 @@ st.markdown("""
 <style>
 
 .live-time {
-    font-size:28px;
-    font-weight:700;
+    font-size:32px;
+    font-weight:800;
     color:#1e3a8a;
     margin-bottom:10px;
 }
 
 .news-card {
     display:flex;
+    justify-content:space-between;
     background:#ffffff;
-    padding:15px;
+    padding:16px;
     border-radius:12px;
     margin-bottom:12px;
-    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
 }
 
 .news-left {
-    flex:3;
+    width:75%;
 }
 
 .news-title {
     font-size:16px;
-    font-weight:600;
+    font-weight:700;
     color:#111827;
 }
 
 .news-date {
     font-size:13px;
     color:#6b7280;
-    margin:5px 0;
+    margin-top:4px;
 }
 
 .news-link {
+    display:inline-block;
+    margin-top:6px;
     color:#2563eb;
     font-weight:600;
-}
-
-.news-right {
-    flex:1;
-    text-align:right;
 }
 
 .news-img {
@@ -64,18 +73,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================
-# 키워드 입력
+# 키워드
 # =========================
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 시간
+# 실시간 시간
 # =========================
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-st.markdown(f"""
-<div class="live-time">⏰ 현재 시간: {now}</div>
-""", unsafe_allow_html=True)
+st.markdown(f'<div class="live-time">⏰ 현재 시간: {now}</div>', unsafe_allow_html=True)
 
 # =========================
 # 헤더
@@ -119,7 +126,7 @@ def get_img(url):
     except:
         pass
 
-    return "https://via.placeholder.com/150"
+    return "https://via.placeholder.com/120"
 
 df = get_news(keyword)
 
@@ -132,10 +139,10 @@ with col1:
     st.metric("총 뉴스 수", len(df))
 
 with col2:
-    st.metric("최신 기사 시간", df.iloc[0]['date'][:16])
+    st.metric("최신 기사 시간", df.iloc[0]["date"][:16])
 
 # =========================
-# 리스트 (정상 출력)
+# 리스트 (🔥 핵심 수정)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -143,7 +150,7 @@ for _, row in df.iterrows():
 
     img = get_img(row["link"])
 
-    st.markdown(f"""
+    card_html = f"""
     <div class="news-card">
 
         <div class="news-left">
@@ -152,9 +159,11 @@ for _, row in df.iterrows():
             <a class="news-link" href="{row['link']}" target="_blank">기사보기 →</a>
         </div>
 
-        <div class="news-right">
+        <div>
             <img class="news-img" src="{img}">
         </div>
 
     </div>
-    """, unsafe_allow_html=True)
+    """
+
+    st.markdown(card_html, unsafe_allow_html=True)
