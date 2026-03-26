@@ -4,10 +4,8 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from dateutil import parser
 import pandas as pd
-import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
-
-plt.rcParams['font.family'] = 'Malgun Gothic'
+import plotly.express as px
 
 st.set_page_config(page_title="뉴스 BI 대시보드", layout="wide")
 
@@ -19,41 +17,45 @@ KEYWORD = st.text_input("키워드", "재생의학")
 # 시간 변환
 # ------------------------
 def time_ago(pub_date):
-    try:
-        dt = parser.parse(pub_date)
-        now = datetime.now(timezone.utc)
-        diff = now - dt
+    dt = parser.parse(pub_date)
+    now = datetime.now(timezone.utc)
+    diff = now - dt
 
-        minutes = int(diff.total_seconds() / 60)
-        hours = int(minutes / 60)
+    minutes = int(diff.total_seconds() / 60)
+    hours = int(minutes / 60)
 
-        if minutes < 60:
-            return f"{minutes}분 전"
-        elif hours < 24:
-            return f"{hours}시간 전"
-        else:
-            return f"{int(hours/24)}일 전"
-    except:
-        return pub_date
+    if minutes < 60:
+        return f"{minutes}분 전"
+    elif hours < 24:
+        return f"{hours}시간 전"
+    else:
+        return f"{int(hours/24)}일 전"
 
 # ------------------------
-# 이미지 추출
+# 실제 이미지 추출 (강화버전)
 # ------------------------
 def get_image(url):
     try:
-        res = requests.get(url, timeout=3)
+        res = requests.get(url, timeout=3, headers={"User-Agent":"Mozilla/5.0"})
         soup = BeautifulSoup(res.text, "html.parser")
 
-        img = soup.find("meta", property="og:image")
-        if img:
-            return img["content"]
+        # og:image 우선
+        og = soup.find("meta", property="og:image")
+        if og:
+            return og["content"]
+
+        # img 태그 fallback
+        img = soup.find("img")
+        if img and img.get("src"):
+            return img["src"]
+
     except:
         pass
 
     return "https://picsum.photos/400/250"
 
 # ------------------------
-# 뉴스 수집 (핵심 수정 포함)
+# 뉴스 수집 (핵심)
 # ------------------------
 def get_news(keyword):
     url = f"https://news.google.com/rss/search?q={keyword}&hl=ko&gl=KR&ceid=KR:ko"
@@ -66,9 +68,9 @@ def get_news(keyword):
         link = item.find("link").text
         pub_date = item.find("pubDate").text
 
-        # 🔥 핵심: 실제 기사 URL 변환
+        # 🔥 핵심: 리다이렉트 따라가기
         try:
-            r = requests.get(link, timeout=3)
+            r = requests.get(link, allow_redirects=True, timeout=3)
             real_url = r.url
         except:
             real_url = link
@@ -84,18 +86,13 @@ def get_news(keyword):
 
     return items
 
-# ------------------------
-# 실행
-# ------------------------
 if st.button("🔄 새로고침"):
     st.rerun()
 
 news_list = get_news(KEYWORD)
 
-st.caption(f"마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
 # ------------------------
-# KPI
+# KPI 카드 (UI 개선)
 # ------------------------
 col1, col2, col3 = st.columns(3)
 
@@ -117,12 +114,11 @@ for n in news_list:
         pass
 
 df = pd.DataFrame(times, columns=["hour"])
-chart_data = df["hour"].value_counts().sort_index()
 
 keyword_count = sum(1 for n in news_list if KEYWORD in n["title"])
 
 # ------------------------
-# 📊 그래프
+# 📊 Plotly 그래프 (BI 느낌)
 # ------------------------
 colA, colB = st.columns(2)
 
@@ -130,47 +126,39 @@ with colA:
     st.subheader("📊 시간대별 뉴스")
 
     if not df.empty:
-        fig, ax = plt.subplots()
-        chart_data.plot(kind='bar', ax=ax)
-
-        ax.set_xlabel("시간")
-        ax.set_ylabel("뉴스 수")
-        ax.set_title("시간대별 분포")
-
-        plt.xticks(rotation=0)
-
-        st.pyplot(fig)
+        fig = px.histogram(df, x="hour", nbins=24,
+                           title="시간대별 뉴스 분포",
+                           labels={"hour":"시간"})
+        st.plotly_chart(fig, use_container_width=True)
 
 with colB:
     st.subheader("📊 키워드 비율")
 
-    fig2, ax2 = plt.subplots()
-
-    labels = ["포함", "기타"]
-    values = [keyword_count, len(news_list) - keyword_count]
-
-    ax2.bar(labels, values)
-
-    ax2.set_xlabel("구분")
-    ax2.set_ylabel("건수")
-    ax2.set_title("키워드 포함 여부")
-
-    st.pyplot(fig2)
+    fig2 = px.pie(
+        names=["키워드 포함", "기타"],
+        values=[keyword_count, len(news_list)-keyword_count],
+        title="키워드 포함 비율"
+    )
+    st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("---")
 
 # ------------------------
-# 📰 뉴스 카드
+# 📰 뉴스 카드 (UI 개선)
 # ------------------------
 for news in news_list:
-    col1, col2 = st.columns([1,3])
-
-    with col1:
-        st.image(news["image"], use_container_width=True)
-
-    with col2:
-        st.subheader(news["title"])
-        st.caption(time_ago(news["date"]))
-        st.markdown(f"[▶ 기사 보기]({news['link']})")
-
-    st.markdown("---")
+    st.markdown(
+        f"""
+        <div style="display:flex; gap:20px; margin-bottom:20px; 
+                    border:1px solid #eee; padding:15px; border-radius:10px;
+                    box-shadow:2px 2px 10px rgba(0,0,0,0.05)">
+            <img src="{news['image']}" width="200" style="border-radius:8px;">
+            <div>
+                <h4>{news['title']}</h4>
+                <p style="color:gray">{time_ago(news['date'])}</p>
+                <a href="{news['link']}" target="_blank">▶ 기사 보기</a>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
