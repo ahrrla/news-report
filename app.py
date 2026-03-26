@@ -3,35 +3,35 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
-import time
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 스타일 (기존 유지 + 시간만 개선)
+# 스타일
 # =========================
 st.markdown("""
 <style>
 
-/* 시간 강조 */
+/* 시간 색상 (어둡게 변경) */
 .live-time {
-    font-size:28px;
+    font-size:26px;
     font-weight:700;
-    color:#38bdf8;
-    margin-top:10px;
+    color:#2563eb;
+    margin-bottom:10px;
 }
 
-/* 모바일 가독성 보정 (최소 수정) */
+/* 모바일 가독성 */
 .news-title {
-    color:#ffffff !important;
+    color:#111827 !important;
 }
 
 .news-desc {
-    color:#cbd5f5 !important;
+    color:#4b5563 !important;
 }
 
 a {
-    color:#38bdf8 !important;
+    color:#2563eb !important;
+    font-weight:600;
 }
 
 </style>
@@ -43,18 +43,20 @@ a {
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 실시간 시간
+# 현재 시간 (한번만 표시)
 # =========================
-time_placeholder = st.empty()
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+st.markdown(f"""
+<div class="live-time">⏰ 현재 시간: {now}</div>
+""", unsafe_allow_html=True)
 
 # =========================
-# 헤더 (기존 유지)
+# 헤더
 # =========================
 st.markdown(f"""
-<div class="header">
-    <h2>🧬 재생의학연구소 뉴스 인사이트</h2>
-    <p>현재 키워드: <b>{keyword}</b></p>
-</div>
+<h2>🧬 재생의학연구소 뉴스 인사이트</h2>
+<p>현재 키워드: <b>{keyword}</b></p>
 """, unsafe_allow_html=True)
 
 # =========================
@@ -96,40 +98,18 @@ def get_img(url):
 df = get_news(keyword)
 
 # =========================
-# KPI (기존 그대로)
+# KPI
 # =========================
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown(f"""
-    <div class="kpi">
-        <h4>총 뉴스 수</h4>
-        <h1>{len(df)}</h1>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("총 뉴스 수", len(df))
 
 with col2:
-    st.markdown(f"""
-    <div class="kpi">
-        <h4>최신 기사 시간</h4>
-        <h2>{df.iloc[0]['date'][:16]}</h2>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("최신 기사 시간", df.iloc[0]['date'][:16])
 
 # =========================
-# 실시간 시간 표시 (핵심 개선)
-# =========================
-while True:
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    time_placeholder.markdown(f"""
-    <div class="live-time">⏰ 현재 시간: {now}</div>
-    """, unsafe_allow_html=True)
-
-    time.sleep(1)
-
-# =========================
-# 리스트 (기존 유지)
+# 리스트 (복구됨)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -138,14 +118,17 @@ for _, row in df.iterrows():
     img = get_img(row["link"])
 
     st.markdown(f"""
-    <div class="news-row">
-        <div class="news-text">
+    <div style="display:flex; background:#ffffff; padding:15px; border-radius:10px; margin-bottom:10px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+        
+        <div style="flex:3;">
             <div class="news-title">{row['title']}</div>
             <div class="news-desc">{row['date']}</div>
             <a href="{row['link']}" target="_blank">기사보기 →</a>
         </div>
-        <div class="news-img">
-            <img src="{img}">
+
+        <div style="flex:1; text-align:right;">
+            <img src="{img}" style="width:120px; height:80px; border-radius:8px;">
         </div>
+
     </div>
     """, unsafe_allow_html=True)
