@@ -1,14 +1,8 @@
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px
 from bs4 import BeautifulSoup
-
-# =========================
-# 네이버 API (정확히 입력)
-# =========================
-CLIENT_ID = "dmIEAMApT_Ep6C7bPNs2"
-CLIENT_SECRET = "Cylzhl0oGi"
+import plotly.express as px
 
 st.set_page_config(layout="wide")
 
@@ -30,38 +24,25 @@ body {background:#0f172a;color:white;}
 st.markdown("<div class='header'>📊 AI 뉴스 BI 대시보드</div>", unsafe_allow_html=True)
 
 # =========================
-# 뉴스 가져오기 (안정형)
+# RSS 뉴스 가져오기
 # =========================
 def get_news():
-    url = "https://openapi.naver.com/v1/search/news.json"
+    url = "https://news.google.com/rss/search?q=병원+피부미용+재생의학&hl=ko&gl=KR&ceid=KR:ko"
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, "xml")
 
-    headers = {
-        "X-Naver-Client-Id": CLIENT_ID,
-        "X-Naver-Client-Secret": CLIENT_SECRET
-    }
+    items = soup.find_all("item")
 
-    params = {
-        "query": "병원 피부미용 재생의학",
-        "display": 30,
-        "sort": "date"
-    }
+    data = []
 
-    try:
-        res = requests.get(url, headers=headers, params=params)
+    for item in items:
+        data.append({
+            "title": item.title.text,
+            "link": item.link.text,
+            "pubDate": item.pubDate.text
+        })
 
-        if res.status_code != 200:
-            st.error(f"API 오류 코드: {res.status_code}")
-            st.text(res.text)
-            return []
-
-        data = res.json()
-
-        return data.get("items", [])
-
-    except Exception as e:
-        st.error("API 호출 실패")
-        st.text(e)
-        return []
+    return pd.DataFrame(data)
 
 # =========================
 # 이미지 가져오기
@@ -75,10 +56,6 @@ def get_image(url):
         if og:
             return og["content"]
 
-        img = soup.find("img")
-        if img:
-            return img.get("src")
-
     except:
         pass
 
@@ -87,21 +64,9 @@ def get_image(url):
 # =========================
 # 실행
 # =========================
-data = get_news()
+df = get_news()
 
-if not data:
-    st.warning("뉴스 없음 (API 인증 또는 설정 문제)")
-    st.stop()
-
-df = pd.DataFrame(data)
-
-# 컬럼 안전 처리
-df["title"] = df.get("title", "").astype(str).str.replace("<b>", "").str.replace("</b>", "")
-df["description"] = df.get("description", "").astype(str).str.replace("<b>", "").str.replace("</b>", "")
-df["link"] = df.get("link", "")
-df["originallink"] = df.get("originallink", "")
-df["pubDate"] = pd.to_datetime(df.get("pubDate"))
-
+df["pubDate"] = pd.to_datetime(df["pubDate"])
 df["hour"] = df["pubDate"].dt.hour
 
 # =========================
@@ -127,16 +92,13 @@ st.markdown("## 📰 뉴스 리스트")
 cols = st.columns(3)
 
 for i, row in df.iterrows():
-
-    link = row["link"] if "n.news.naver.com" in row["link"] else row["originallink"]
-    img = get_image(link)
+    img = get_image(row["link"])
 
     with cols[i % 3]:
         st.markdown(f"""
         <div class="card">
             <img src="{img}">
             <div class="title">{row['title']}</div>
-            <div class="desc">{row['description']}</div>
-            <a href="{link}" target="_blank">기사 보기 →</a>
+            <a href="{row['link']}" target="_blank">기사 보기 →</a>
         </div>
         """, unsafe_allow_html=True)
