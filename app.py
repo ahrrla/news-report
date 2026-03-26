@@ -3,19 +3,14 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 from datetime import datetime
-import time
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(layout="wide")
 
 # =========================
-# 자동 새로고침 (1초마다)
+# 자동 새로고침 (1초)
 # =========================
-if "run" not in st.session_state:
-    st.session_state.run = True
-
-if st.session_state.run:
-    time.sleep(1)
-    st.rerun()
+st_autorefresh(interval=1000, key="clock")
 
 # =========================
 # 스타일
@@ -73,7 +68,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================
-# 키워드
+# 키워드 입력
 # =========================
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
@@ -113,7 +108,7 @@ def get_news(keyword):
     return pd.DataFrame(data)
 
 # =========================
-# 이미지
+# 이미지 가져오기
 # =========================
 def get_img(url):
     try:
@@ -142,7 +137,7 @@ with col2:
     st.metric("최신 기사 시간", df.iloc[0]["date"][:16])
 
 # =========================
-# 리스트 (🔥 핵심 수정)
+# 뉴스 리스트
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -150,7 +145,7 @@ for _, row in df.iterrows():
 
     img = get_img(row["link"])
 
-    card_html = f"""
+    html = f"""
     <div class="news-card">
 
         <div class="news-left">
@@ -166,4 +161,4 @@ for _, row in df.iterrows():
     </div>
     """
 
-    st.markdown(card_html, unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
