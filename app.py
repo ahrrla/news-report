@@ -32,7 +32,7 @@ keyword = st.text_input("키워드", "MES")
 
 data = newsapi.get_everything(
     q=keyword,
-    language="ko",
+    language="en",
     sort_by="publishedAt",
     page_size=50
 )
