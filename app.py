@@ -33,54 +33,50 @@ def time_ago(pub_date):
         return f"{int(hours/24)}일 전"
 
 # ------------------------
-# 🔥 Google 뉴스 → 실제 기사 URL 변환
+# 🔥 Google 뉴스 → 실제 기사 링크 추출
 # ------------------------
 def get_real_url(google_url):
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(google_url, headers=headers, allow_redirects=True, timeout=5)
-        return res.url
+        res = requests.get(google_url, headers=headers, timeout=5)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        a_tag = soup.find("a", href=True)
+        if a_tag:
+            return a_tag["href"]
+        return google_url
     except:
         return google_url
 
 # ------------------------
-# 🔥 본문 이미지 추출 (핵심 수정)
+# 🔥 본문 이미지 추출 (핵심)
 # ------------------------
 def get_article_image(url):
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Referer": url
+        }
         res = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(res.text, "html.parser")
 
         # 1순위: og:image
         og = soup.find("meta", property="og:image")
-        if og and og.get("content") and "google" not in og["content"]:
+        if og and og.get("content"):
             return og["content"]
 
-        # 2순위: twitter:image
-        tw = soup.find("meta", property="twitter:image")
-        if tw and tw.get("content") and "google" not in tw["content"]:
-            return tw["content"]
+        # 2순위: 본문 이미지
+        for img in soup.find_all("img"):
+            src = img.get("src")
+            if src and ("http" in src) and ("logo" not in src):
+                return src
 
-        # 실패
         return None
     except:
         return None
 
 # ------------------------
-# RSS description fallback
-# ------------------------
-def extract_image(description):
-    try:
-        img_url = re.search(r'<img src="(.*?)"', description).group(1)
-        if "google" not in img_url:
-            return img_url
-        return None
-    except:
-        return None
-
-# ------------------------
-# 뉴스 수집 (핵심 로직 수정)
+# 뉴스 수집
 # ------------------------
 def get_news(keyword):
     url = f"https://news.google.com/rss/search?q={keyword}&hl=ko&gl=KR&ceid=KR:ko"
@@ -94,18 +90,15 @@ def get_news(keyword):
         pub_date = item.find("pubDate").text
         description = item.find("description").text
 
-        # 👉 실제 기사 URL 가져오기
         real_link = get_real_url(google_link)
-
-        # 👉 본문 이미지 크롤링
         image = get_article_image(real_link)
 
-        # 👉 fallback
+        # fallback
         if not image:
-            image = extract_image(description)
-
-        if not image:
-            image = "https://picsum.photos/400/250"
+            try:
+                image = re.search(r'<img src="(.*?)"', description).group(1)
+            except:
+                image = "https://picsum.photos/400/250"
 
         items.append({
             "title": title,
@@ -133,7 +126,7 @@ col3.metric("상태", "정상")
 st.markdown("---")
 
 # ------------------------
-# 📊 그래프 (건드리지 않음)
+# 📊 그래프 (개선)
 # ------------------------
 times = []
 for n in news_list:
@@ -150,8 +143,15 @@ keyword_count = sum(1 for n in news_list if KEYWORD in n["title"])
 colA, colB = st.columns(2)
 
 with colA:
-    fig = px.histogram(df, x="hour", nbins=24,
-                       title="시간대별 뉴스")
+    fig = px.histogram(df, x="hour", nbins=24, title="시간대별 뉴스")
+    fig.update_layout(
+        xaxis_title="시간대",
+        yaxis_title="뉴스 수",
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        xaxis=dict(showgrid=True, gridcolor="#E5E7EB"),
+        yaxis=dict(showgrid=True, gridcolor="#E5E7EB"),
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 with colB:
@@ -160,12 +160,16 @@ with colB:
         values=[keyword_count, len(news_list)-keyword_count],
         title="키워드 비율"
     )
+    fig2.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
 st.markdown("---")
 
 # ------------------------
-# 📰 뉴스 카드 (그대로 유지)
+# 📰 뉴스 카드
 # ------------------------
 for news in news_list:
     st.markdown(
