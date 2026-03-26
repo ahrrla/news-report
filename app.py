@@ -12,26 +12,52 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* 시간 색상 (어둡게 변경) */
 .live-time {
-    font-size:26px;
+    font-size:28px;
     font-weight:700;
-    color:#2563eb;
+    color:#1e3a8a;
     margin-bottom:10px;
 }
 
-/* 모바일 가독성 */
+.news-card {
+    display:flex;
+    background:#ffffff;
+    padding:15px;
+    border-radius:12px;
+    margin-bottom:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+.news-left {
+    flex:3;
+}
+
 .news-title {
-    color:#111827 !important;
-}
-
-.news-desc {
-    color:#4b5563 !important;
-}
-
-a {
-    color:#2563eb !important;
+    font-size:16px;
     font-weight:600;
+    color:#111827;
+}
+
+.news-date {
+    font-size:13px;
+    color:#6b7280;
+    margin:5px 0;
+}
+
+.news-link {
+    color:#2563eb;
+    font-weight:600;
+}
+
+.news-right {
+    flex:1;
+    text-align:right;
+}
+
+.news-img {
+    width:120px;
+    height:80px;
+    border-radius:8px;
 }
 
 </style>
@@ -43,7 +69,7 @@ a {
 keyword = st.text_input("🔍 키워드 입력", "병원 피부미용 재생의학")
 
 # =========================
-# 현재 시간 (한번만 표시)
+# 시간
 # =========================
 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -109,7 +135,7 @@ with col2:
     st.metric("최신 기사 시간", df.iloc[0]['date'][:16])
 
 # =========================
-# 리스트 (복구됨)
+# 리스트 (정상 출력)
 # =========================
 st.subheader("📄 뉴스 리스트")
 
@@ -118,16 +144,16 @@ for _, row in df.iterrows():
     img = get_img(row["link"])
 
     st.markdown(f"""
-    <div style="display:flex; background:#ffffff; padding:15px; border-radius:10px; margin-bottom:10px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
-        
-        <div style="flex:3;">
+    <div class="news-card">
+
+        <div class="news-left">
             <div class="news-title">{row['title']}</div>
-            <div class="news-desc">{row['date']}</div>
-            <a href="{row['link']}" target="_blank">기사보기 →</a>
+            <div class="news-date">{row['date']}</div>
+            <a class="news-link" href="{row['link']}" target="_blank">기사보기 →</a>
         </div>
 
-        <div style="flex:1; text-align:right;">
-            <img src="{img}" style="width:120px; height:80px; border-radius:8px;">
+        <div class="news-right">
+            <img class="news-img" src="{img}">
         </div>
 
     </div>
