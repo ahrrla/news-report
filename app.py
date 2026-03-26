@@ -32,6 +32,7 @@ body {background:#0f172a;color:white;}
 # =========================
 def get_news():
     url = "https://openapi.naver.com/v1/search/news.json"
+
     headers = {
         "X-Naver-Client-Id": CLIENT_ID,
         "X-Naver-Client-Secret": CLIENT_SECRET
@@ -44,7 +45,22 @@ def get_news():
     }
 
     res = requests.get(url, headers=headers, params=params)
-    return res.json()["items"]
+
+    # 🔥 상태코드 체크
+    if res.status_code != 200:
+        st.error(f"API 오류 코드: {res.status_code}")
+        st.text(res.text)
+        return []
+
+    data = res.json()
+
+    # 🔥 items 없으면 대비
+    if "items" not in data:
+        st.error("API 응답 이상 (items 없음)")
+        st.text(data)
+        return []
+
+    return data["items"]
 
 # =========================
 # 이미지 추출 (기사 크롤링)
